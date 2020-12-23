@@ -1,6 +1,6 @@
 # import, check and prepare for analyses data from two bandit samples
 
-setwd("~/Box Sync/Project_wtw/R")
+setwd("~/Box/Project_wtw/R")
 # setwd("~/code/wtw/data/")
 # setwd("../data/")
 
@@ -96,7 +96,7 @@ c1 <-
   compareGroups(
     chars,
     y = sub_df$Group[!sub_df$bad],
-    bivar = TRUE,
+    # bivar = TRUE,
     include.miss = FALSE
   )
 t1 <-
@@ -259,7 +259,7 @@ fdf$finalEarnings <- fdf$totalEarned/fdf$outcomeTime
 
 # load Joe's value functions
 load(file = "vFunc.RData")
-v <- as.tibble(v)
+v <- as_tibble(v)
 # make a new dataframe following Therneau, Crowson & Atkinson, 2018
 ids <- unique(df$ID)
 # unique trial ID
