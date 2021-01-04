@@ -32,6 +32,10 @@ library(multcompView)
 library(stargazer)
 library(dplyr)
 library(readxl)
+library(tidyverse)
+library(stringr)
+library(readr)
+library(coxme)
 # detach(package:plyr)
 ###################
 # merge and check
@@ -265,7 +269,7 @@ load(file = "vFunc.RData")
 v <- as_tibble(v)
 
 ###AT: SAVE THE FILES
-setwd("~/Box/wtwSuicide_new-master/WTW_files.Rdata")
+setwd("~/Box/Project_wtw/wtwSuicide_new-master/WTW_files.Rdata")
 save(file = "WTW_files.Rdata",list = ls(all = T))
 
 ##START HERE
@@ -289,8 +293,8 @@ df_Yvalues <- list_of_files %>%
 ####Delete every first row (1st of 21 rows) per participant---dropping the first row as 
 ##the values are aligned with timepoints rather than bins, no such thing as waiting until second 0
 
- ## Delete every 21st row starting from 1
-df_Yvalues<-df_Yvalues[-seq(1,NROW(df_Yvalues), by = 21),]
+ ## Delete every 21st row starting from 21
+df_Yvalues<-df_Yvalues[-seq(21,NROW(df_Yvalues), by = 21),]
 
 # Add t2 variable 
 df_Yvalues = df_Yvalues %>% group_by(file_name) %>% 
@@ -319,7 +323,7 @@ dfy$ID <- as.numeric(unlist(regmatches(dfy$file_name, gregexpr("[[:digit:]]+", d
 
  dfyl<-dfy %>% 
 pivot_longer (!c(file_name, ID, t1s, t2s), names_to = "trial", names_prefix = "X", values_to = "value") 
- 
+
  #get rid of the file_name column (redundant with ID in there already)
  dfyl=subset(dfyl, select=-c(file_name))
  
@@ -385,7 +389,7 @@ setwd("~/Box/Project_wtw/wtwSuicide_new-master/")
 save(file = 'tddf.Rda', tddf)
 save(file = 'tddf1.Rda', tddf1)
 
-save(file = 'tddf_vs.Rda', tddf_vs)
+
 #####
 # downsample Joe's values to 1s bins
 vs <- as_tibble(v) %>% mutate(t1s = floor(t1)) %>%
@@ -396,6 +400,21 @@ vs <- as_tibble(v) %>% mutate(t1s = floor(t1)) %>%
 # merge two data frames in r
 # r merge by rownames---CHECK
 tddf_vs <- merge(tddf, vs, by = 't1s')
+
+##check that these are the same variables (they are)
+plot(tddf_vs$t2s.x, tddf_vs$t2s.y)
+
+save(file = 'tddf_vs.Rda', tddf_vs)
+##plot Joe's idealized values
+
+ggplot(tddf_vs, aes(t1s, svs)) + geom_line()
+
+
+##see how Joe's idealized values align with Yixin's values
+ggplot(tddf_vs, aes(t1s, svs)) + geom_line() + geom_smooth(aes(t1s, value))
+
+ggplot(tddf_vs, aes(t1s, svs)) + geom_line() + geom_smooth(aes(t1s, value*2 - 4)) + geom_smooth(aes(t1s, as.numeric(quit)*40, color= "r"))
+
 
 # pdf(file = 'hazard by group and period.pdf')
 # ggplot(tddf[!is.na(tddf$initialTime),],aes(x = latency, y = waitValue/100)) + geom_line() + 
@@ -412,8 +431,19 @@ tddf_vs <- merge(tddf, vs, by = 't1s')
 
 # try a coxme for validation
 library(coxme)
-c1 <- coxme(Surv(latency, quit) ~ scale(lat_lag) + scale(initialTime) + win_lag + scale(value) + (1|ID), tddf)
-summary(c1)
+
+## Yixin's values--effects of value negative (z= - 5.71)
+## Data: tddf_vs, events, n = 1423, 29152 (16928 observations deleted due to missingness)
+
+c2 <- coxme(Surv(latency, quit) ~ scale(lat_lag) + scale(initialTime) + win_lag + scale(value) + (1|ID), tddf_vs)
+summary(c2)
+
+##Joe's idealized values, effects of value slightly negative but not significantly (z= -0.08)
+#Data: tddf_vs events, n = 2302, 44657 (1423 observations deleted due to missingness)
+c3 <- coxme(Surv(latency, quit) ~ scale(lat_lag) + scale(initialTime) + win_lag + scale(svs) + (1|ID), tddf_vs)
+summary(c3)
+
+##Older files (Joe's value): Data: tddf events, n = 1847, 304328 (9757 observations deleted due to missingness)
 
 ##########################################
 ##########################################
@@ -490,7 +520,6 @@ ggplot(tddf_vs[!is.na(tddf_vs$initialTime),],aes(x = latency, y = svs/100)) + ge
 
 # turned off SE because they cannot be trusted with GAM
 dev.off()
-
 
 
 
